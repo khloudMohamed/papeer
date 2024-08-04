@@ -61,5 +61,4 @@ func TestToCheckNameOfMarkdowns(t *testing.T) {
 			t.Errorf("File '%s' does not contain any subchapter names\n", file)
 		}
 	}
-
 }
