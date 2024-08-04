@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -17,6 +18,7 @@ func Filename(name string) string {
 
 	filename = strings.ReplaceAll(filename, " ", "_")
 	filename = strings.ReplaceAll(filename, "/", "")
+	filename = strings.ReplaceAll(filename, "|", "")
 
 	return filename
 }
@@ -218,4 +220,49 @@ func ToMobi(c chapter, filename string) string {
 	}
 
 	return filename
+}
+
+// SaveChapterAndSubChaptersAsMarkdown saves a chapter and its subchapters as Markdown files
+func SaveChapterAndSubChaptersAsMarkdown(c chapter, directory string) []string {
+	var filelist []string
+
+	// Sanitize the chapter name
+	c.name = strings.ReplaceAll(c.name, ".", "")
+	c.name = strings.ReplaceAll(c.name, "|", "")
+	c.name = strings.ReplaceAll(c.name, ":", "")
+
+	// Generate a unique filename for the chapter
+	filename := fmt.Sprintf("%s_%s.md", Filename(c.name), Filename(c.name))
+
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		os.MkdirAll(directory, os.ModePerm)
+	}
+
+	filePath := filepath.Join(directory, filename)
+
+	// Convert the chapter content to Markdown
+	markdown := ToMarkdownString(c)
+
+	// Write the Markdown content to a file
+	f, err := os.Create(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err2 := f.WriteString(markdown)
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+	f.Close()
+
+	filelist = append(filelist, filePath)
+
+	// Recursively process subchapters if any
+	if len(c.subChapters) > 0 {
+		subDir := filepath.Join(directory, Filename(c.name))
+		for _, subChapter := range c.subChapters {
+			filelist = append(filelist, SaveChapterAndSubChaptersAsMarkdown(subChapter, subDir)...)
+		}
+	}
+
+	return filelist
 }
